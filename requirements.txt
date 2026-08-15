@@ -1,0 +1,9 @@
+# Core — tested on Python 3.11, Apple Silicon (arm64 / MPS) with torch 2.13
+torch>=2.6
+numpy>=1.26
+
+# Tokenizer (GPT-2 BPE), weight export, dataset download
+tiktoken>=0.7
+safetensors>=0.4
+huggingface_hub>=0.24
+tqdm>=4.66

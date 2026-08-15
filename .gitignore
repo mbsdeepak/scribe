@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# venv
+.venv/
+venv/
+
+# data / checkpoints / weights (large, regenerable)
+data/*.bin
+data/*.txt
+checkpoints/
+out/
+*.safetensors
+*.pt
+
+# editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
