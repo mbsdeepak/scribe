@@ -48,8 +48,10 @@ class TrainConfig:
     epochs: int = 3               # default target horizon (overridable per run)
 
     # optimization (AdamW + cosine schedule with linear warmup, keyed off global step)
-    batch_size: int = 32
-    grad_accum: int = 4           # effective batch = batch_size * grad_accum = 128
+    # batch_size kept small so the [B, T, vocab] training logits fit in 16GB MPS;
+    # grad_accum makes up the effective batch (8 * 16 = 128).
+    batch_size: int = 8
+    grad_accum: int = 16          # effective batch = batch_size * grad_accum = 128
     warmup_steps: int = 200
     lr: float = 6e-4
     min_lr: float = 6e-5

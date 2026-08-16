@@ -89,15 +89,36 @@ the model right after training.
 
 ## Results
 
-> _Training in progress._ Target validation loss ≈ **1.2–1.5** (where TinyStories
-> models start writing coherent stories); this section will be updated with the
-> final loss curve and sample generations once the 3-epoch run finishes.
+Trained on an Apple-Silicon MacBook (MPS, 16 GB) — **~3.4 h total**. Validation
+cross-entropy over a warmup + cosine-decay schedule:
 
-Reproduce once trained:
+| step | val loss | | step | val loss |
+| --: | --: | --- | --: | --: |
+| 500  | 2.60 | | 2500 | 1.82 |
+| 1000 | 2.15 | | 3000 | 1.77 |
+| 1500 | 1.98 | | 3500 | 1.75 |
+| 2000 | 1.89 | | 3700 | **1.74** |
+
+At val loss ≈ 1.74 the model writes coherent little stories with dialogue and a
+simple plot:
+
+> **"Once upon a time"** → *there was a little girl named Lily. She loved to read
+> magazines. One day, she found a magazine in her mom's room... "Mommy, look at
+> that magazine!" Lily said... Her mom looked at the magazine and smiled. "That's
+> very nice, Lily. But be careful with it, it might break."*
+>
+> **"One day, a boy named Deepak"** → *went to the park every day. He saw a large
+> tree and wanted to climb it. He started to climb it, but it was too heavy for
+> him. He tried to jump, but he fell.*
+
+Reproduce:
 
 ```bash
-python -m src.sample --prompt "Once upon a time, a little robot" --tokens 200
+python -m src.sample --ckpt checkpoints/best.pt --prompt "Once upon a time" --tokens 200
 ```
+
+> _A longer run continues to improve; 1.74 is the current checkpoint, trained to
+> step 3700 with the LR fully decayed._
 
 ---
 

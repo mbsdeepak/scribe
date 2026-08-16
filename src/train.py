@@ -98,6 +98,9 @@ def main() -> None:
     ap.add_argument("--limit", type=int, default=None, help="cap #stories when preparing")
     ap.add_argument("--until-epoch", type=int, default=None, help="train until this total epoch")
     ap.add_argument("--epochs", type=int, default=None, help="train this many MORE epochs")
+    ap.add_argument("--max-steps", type=int, default=None,
+                    help="train until this global step; also sets the cosine LR horizon "
+                         "(so the schedule fully decays by then). Overrides epoch targets.")
     ap.add_argument("--fresh", action="store_true", help="ignore any checkpoint and start over")
     ap.add_argument("--smoke", action="store_true", help="tiny model + tiny data to test the loop")
     args = ap.parse_args()
@@ -152,20 +155,31 @@ def main() -> None:
     else:
         torch.manual_seed(tc.seed); np.random.seed(tc.seed); random.seed(tc.seed)
 
-    print(f"parameters: {model.num_params()/1e6:.2f}M | steps/epoch≈{steps_per_epoch}")
+    print(f"parameters: {model.num_params()/1e6:.2f}M | steps/epoch≈{steps_per_epoch}", flush=True)
 
     # ---- resolve target ----
-    if args.until_epoch is not None:
-        target_epoch = args.until_epoch
-    elif args.epochs is not None:
-        target_epoch = completed_epochs + args.epochs
+    if args.max_steps is not None:
+        # Step-based target: stop at max_steps AND aim the cosine schedule there,
+        # so the LR fully decays to min_lr by then regardless of epoch length.
+        total_steps = args.max_steps
+        target_epoch = 10 ** 9  # effectively unbounded; the loop stops on global_step
+        if global_step >= args.max_steps:
+            print(f"already at step {global_step} (target {args.max_steps}); nothing to do.")
+            return
+        print(f"training to global step {args.max_steps} from {global_step} "
+              f"(cosine horizon={total_steps})", flush=True)
     else:
-        target_epoch = tc.epochs
-    if target_epoch <= completed_epochs:
-        print(f"already trained to epoch {completed_epochs} (target {target_epoch}); nothing to do.")
-        return
-    total_steps = target_epoch * steps_per_epoch  # cosine horizon aims at the target
-    print(f"training epochs {completed_epochs+1}..{target_epoch}  (total_steps horizon={total_steps})")
+        if args.until_epoch is not None:
+            target_epoch = args.until_epoch
+        elif args.epochs is not None:
+            target_epoch = completed_epochs + args.epochs
+        else:
+            target_epoch = tc.epochs
+        if target_epoch <= completed_epochs:
+            print(f"already trained to epoch {completed_epochs} (target {target_epoch}); nothing to do.")
+            return
+        total_steps = target_epoch * steps_per_epoch  # cosine horizon aims at the target
+        print(f"training epochs {completed_epochs+1}..{target_epoch}  (total_steps horizon={total_steps})", flush=True)
 
     # ---- train ----
     model.train()
@@ -195,7 +209,8 @@ def main() -> None:
                 running += loss.item()
                 if global_step % tc.log_interval == 0:
                     lr = optim.param_groups[0]["lr"]
-                    print(f"  epoch {epoch+1}/{target_epoch} step {global_step} "
+                    denom = f"/{args.max_steps}" if args.max_steps else ""
+                    print(f"  step {global_step}{denom} (epoch {epoch+1}) "
                           f"loss {loss.item():.4f} lr {lr:.2e} {time.time()-t0:.0f}s", flush=True)
 
                 # mid-epoch eval + checkpoint (also the pause-safety cadence)
@@ -211,6 +226,16 @@ def main() -> None:
                     save_ckpt(last_path, model, optim, gc, epoch, global_step, best_val)
                     print(f"[paused] saved {last_path} at epoch {epoch+1}, step {global_step}. "
                           f"Run again to resume.", flush=True)
+                    return
+
+                if args.max_steps is not None and global_step >= args.max_steps:
+                    val = estimate_loss(model, tc, val_loader)
+                    save_ckpt(last_path, model, optim, gc, epoch, global_step, best_val)
+                    if val < best_val:
+                        best_val = val
+                        save_ckpt(os.path.join(tc.out_dir, BEST), model, optim, gc, epoch, global_step, best_val)
+                    print(f"[done] reached max_steps {args.max_steps} at step {global_step} | "
+                          f"val_loss {val:.4f} | best {best_val:.4f}", flush=True)
                     return
 
             # end of epoch
