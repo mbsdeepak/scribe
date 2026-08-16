@@ -111,6 +111,9 @@ simple plot:
 > tree and wanted to climb it. He started to climb it, but it was too heavy for
 > him. He tried to jump, but he fell.*
 
+**Pretrained weights:** [huggingface.co/mbsdeepak/scribe](https://huggingface.co/mbsdeepak/scribe)
+(`model.safetensors` + `config.json`).
+
 Reproduce:
 
 ```bash
