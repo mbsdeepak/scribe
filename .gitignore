@@ -22,3 +22,6 @@ out/
 .idea/
 .vscode/
 *.swp
+
+# Claude Code project memory + settings (keep tracked)
+!.claude/

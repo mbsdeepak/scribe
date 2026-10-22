@@ -1,0 +1,10 @@
+{
+  "name": "scribe",
+  "n_layer": 6,
+  "n_head": 6,
+  "n_kv_head": 6,
+  "n_embd": 384,
+  "vocab_size": 50257,
+  "max_position": 256,
+  "dtype": "float32"
+}
